@@ -7,7 +7,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "mastra dev",
     "build": "mastra build",
-    "start": "mastra start"
+    "start": "tsx src/server.ts",
+    "ingest": "tsx scripts/ingest.ts",
+    "eval": "tsx scripts/eval.ts"
   },
   "keywords": [],
   "author": "",
@@ -17,6 +19,7 @@
     "node": ">=22.13.0"
   },
   "dependencies": {
+    "@ai-sdk/google": "^3.0.80",
     "@mastra/core": "^1.41.0",
     "@mastra/duckdb": "^1.4.1",
     "@mastra/evals": "^1.2.4",
@@ -24,11 +27,18 @@
     "@mastra/loggers": "^1.1.2",
     "@mastra/memory": "^1.20.2",
     "@mastra/observability": "^1.14.1",
+    "axios": "^1.7.0",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "pg": "^8.21.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@types/express": "^4.17.17",
     "@types/node": "^25.9.1",
+    "@types/pg": "^8.10.3",
     "mastra": "^1.12.2",
+    "tsx": "^4.22.4",
     "typescript": "^6.0.3"
   }
 }
