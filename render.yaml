@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: tara-finance-agent
+    env: node
+    plan: starter
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tara-finance-db
+          property: connectionString
+      - key: GOOGLE_API_KEY
+        sync: false # Set this manually in Render dashboard
+    # Health check path
+    healthCheckPath: /health
+    # Port Render should use (optional, defaults to 10000, but our server uses 3000 or process.env.PORT)
+    # Don't need to set, since server uses process.env.PORT which Render sets automatically
+
+databases:
+  - name: tara-finance-db
+    plan: starter
+    databaseName: tara_finance_db
+    user: tara_finance_user

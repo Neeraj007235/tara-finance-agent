@@ -60,8 +60,10 @@ DATA_DIR=./data/sample_c npx tsx scripts/ingest.ts
 ```
 
 Windows PowerShell
+```bash
 $env:DATA_DIR="./data/sample_a"
 npm run ingest
+```
 
 This will:
 - Create all necessary tables
@@ -325,44 +327,32 @@ Query transactions by:
 - Uncategorized transactions still queryable by date/merchant
 - Noisy memos treated as untrusted data
 
-## Deployment
+## Database Setup
 
-### Local Postgres
+This project uses [Neon](https://neon.tech) (serverless Postgres).
 
-```bash
-# Using Homebrew (macOS)
-brew install postgresql@16
-brew services start postgresql@16
-psql -U postgres -c "CREATE DATABASE provue_tara;"
-export DATABASE_URL=postgres://postgres@localhost:5432/provue_tara
+### 1. Create a Neon Database
+
+1. Go to [neon.tech](https://neon.tech) and sign up
+2. Create a new project and name the database `provue_tara`
+3. Copy the connection string from the dashboard — it looks like:
+4. Add it to your `.env` file:
+```env
+   DATABASE_URL=postgres://user:password@ep-xxx.us-east-1.aws.neon.tech/provue_tara?sslmode=require
 ```
 
-### Docker Postgres
+That's it. The ingest script will create all tables automatically on first run.
 
-```bash
-docker run -d --name provue-pg -p 5432:5432 \
-  -e POSTGRES_PASSWORD=postgres \
-  postgres:16
+## Deployment (Render)
 
-export DATABASE_URL=postgres://postgres:postgres@localhost:5432/provue_tara
-```
-
-### Deploy to Render
-
-1. Create a new Web Service on [render.com](https://render.com)
-2. Connect your GitHub repo
-3. Build command: `npm install && npm run build`
-4. Start command: `npm start`
-5. Add environment variables:
-   - `DATABASE_URL`: (Render will provision for you or use external)
-   - `OPENAI_API_KEY`: Your OpenAI API key
-   - `NODE_ENV`: `production`
-
-Example Render PostgreSQL connection:
-
-```
-DATABASE_URL=postgres://user:pass@hostname:5432/dbname
-```
+1. Push your code to GitHub
+2. Create a new Web Service on [render.com](https://render.com)
+3. Connect your GitHub repo
+4. Set these environment variables in Render dashboard:
+   - `DATABASE_URL` — your Neon connection string
+   - `GOOGLE_API_KEY` — your Google AI key
+5. Build command: `npm install`
+6. Start command: `npm start`
 
 ### Deploy to Railway
 
@@ -370,15 +360,6 @@ DATABASE_URL=postgres://user:pass@hostname:5432/dbname
 2. Add PostgreSQL plugin
 3. Set environment variables
 4. Deploy
-
-### Deploy to Fly.io
-
-```bash
-fly auth login
-fly launch  # Follow prompts
-fly postgres attach  # Attach Postgres
-fly deploy
-```
 
 ## Configuration
 
@@ -457,7 +438,3 @@ If you hit a blocker:
 3. Check database directly: `psql provue_tara -c "SELECT * FROM transactions LIMIT 5;"`
 4. Verify LLM API key and quota
 5. Try with a sample question in the eval script
-
-## License
-
-ISC
