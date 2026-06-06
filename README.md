@@ -13,6 +13,8 @@ Tara uses AI to understand your financial questions and fetch real data from a P
 
 Every answer is grounded in your actual financial data—Tara never guesses or invents figures.
 
+**Live API:** https://tara-finance-agent-04nj.onrender.com
+
 ## Quick Start
 
 ### Prerequisites
@@ -88,7 +90,7 @@ GET /logs - View request logs
 ### 5. Ask Tara a Question
 
 ```bash
-curl -X POST http://localhost:3000/ask \
+curl -X POST https://tara-finance-agent-04nj.onrender.com/ask \
   -H "Content-Type: application/json" \
   -d '{"question": "How much did I spend on food in January 2024"}'
 ```
