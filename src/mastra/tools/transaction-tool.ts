@@ -15,7 +15,10 @@ export const transactionTool = createTool({
     limit: z.number().optional().describe('Limit number of results (default 20)'),
     excludeTransfers: z.boolean().optional().describe('Exclude transfer category transactions (default true)'),
   }),
-  execute: async (input) => {
+  execute: async (input: any) => {
+    console.log('\n=== TRANSACTION TOOL CALLED ===');
+    console.log('input:', JSON.stringify(input, null, 2));
+    let result: any;
     try {
       const limit = input.limit || 20;
       
@@ -24,8 +27,14 @@ export const transactionTool = createTool({
 
       if (input.aggregation === 'sum') {
         // Get total spend
-        const total = await queries.getNetSpend(input.startDate, input.endDate);
-        return {
+        const total = Number(await queries.getNetSpend(
+          input.startDate, 
+          input.endDate, 
+          input.category, 
+          input.merchant, 
+          excludeTransfers
+        )) || 0;
+        result = {
           type: 'aggregate',
           metric: 'total_spend',
           value: parseFloat(total.toFixed(2)),
@@ -35,15 +44,13 @@ export const transactionTool = createTool({
             endDate: input.endDate,
           },
         };
-      }
-
-      if (input.aggregation === 'by_category') {
+      } else if (input.aggregation === 'by_category') {
         // Get spend by category
         let results = await queries.getTotalSpendByCategory(input.startDate, input.endDate);
         if (excludeTransfers) {
           results = results.filter((r: any) => r.category !== 'transfer');
         }
-        return {
+        result = {
           type: 'aggregation',
           metric: 'spend_by_category',
           data: results.slice(0, limit).map((r: any) => ({
@@ -51,18 +58,15 @@ export const transactionTool = createTool({
             amount: parseFloat(r.total.toFixed(2)),
           })),
         };
-      }
-
-      if (input.aggregation === 'top_merchants') {
+      } else if (input.aggregation === 'top_merchants') {
         // Get top merchants
         let results = await queries.getTotalSpendByMerchant(input.startDate, input.endDate);
         if (excludeTransfers) {
           results = results.filter((r: any) => {
-            const txns = queries.getTransactionsByMerchant(r.merchant, input.startDate, input.endDate);
-            return txns;
+            return true; // Simplified for now
           });
         }
-        return {
+        result = {
           type: 'ranking',
           metric: 'top_merchants',
           data: results.slice(0, limit).map((r: any, idx: number) => ({
@@ -71,9 +75,7 @@ export const transactionTool = createTool({
             amount: parseFloat(r.total.toFixed(2)),
           })),
         };
-      }
-
-      if (input.aggregation === 'monthly') {
+      } else if (input.aggregation === 'monthly') {
         // Get monthly spend
         const month_data: any = {};
         let transactions = await queries.getTransactionsByDateRange(
@@ -101,7 +103,7 @@ export const transactionTool = createTool({
           month_data[month] += txn.amount;
         }
 
-        return {
+        result = {
           type: 'time_series',
           metric: 'monthly_spend',
           data: Object.entries(month_data)
@@ -111,47 +113,52 @@ export const transactionTool = createTool({
             }))
             .sort((a, b) => a.month.localeCompare(b.month)),
         };
-      }
-
-      // Default: return filtered transactions
-      let transactions = [];
-
-      if (input.merchant) {
-        transactions = await queries.getTransactionsByMerchant(
-          input.merchant,
-          input.startDate,
-          input.endDate
-        );
-      } else if (input.category) {
-        transactions = await queries.getTransactionsByCategory(
-          input.category,
-          input.startDate,
-          input.endDate
-        );
       } else {
-        transactions = await queries.getTransactionsByDateRange(
-          input.startDate || '2024-01-01',
-          input.endDate || '2025-12-31'
-        );
+        // Default: return filtered transactions
+        let transactions = [];
+
+        if (input.merchant) {
+          transactions = await queries.getTransactionsByMerchant(
+            input.merchant,
+            input.startDate,
+            input.endDate
+          );
+        } else if (input.category) {
+          transactions = await queries.getTransactionsByCategory(
+            input.category,
+            input.startDate,
+            input.endDate
+          );
+        } else {
+          transactions = await queries.getTransactionsByDateRange(
+            input.startDate || '2024-01-01',
+            input.endDate || '2025-12-31'
+          );
+        }
+
+        if (excludeTransfers) {
+          transactions = transactions.filter((t: any) => t.category !== 'transfer');
+        }
+
+        result = {
+          type: 'transactions',
+          count: transactions.length,
+          data: transactions.slice(0, limit).map((t: any) => ({
+            id: t.id,
+            date: t.date,
+            merchant: t.merchant,
+            category: t.category,
+            amount: parseFloat(t.amount.toFixed(2)),
+            memo: t.memo,
+          })),
+        };
       }
 
-      if (excludeTransfers) {
-        transactions = transactions.filter((t: any) => t.category !== 'transfer');
-      }
-
-      return {
-        type: 'transactions',
-        count: transactions.length,
-        data: transactions.slice(0, limit).map((t: any) => ({
-          id: t.id,
-          date: t.date,
-          merchant: t.merchant,
-          category: t.category,
-          amount: parseFloat(t.amount.toFixed(2)),
-          memo: t.memo,
-        })),
-      };
+      console.log('\n=== TRANSACTION TOOL RETURNING ===');
+      console.log('output:', JSON.stringify(result, null, 2));
+      return result;
     } catch (error: any) {
+      console.error('Error in transaction tool:', error);
       return {
         type: 'error',
         message: error.message,

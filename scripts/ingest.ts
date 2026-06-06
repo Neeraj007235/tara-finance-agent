@@ -57,12 +57,19 @@ async function ingestTransactions(filePath: string) {
 
   const client = await pool.connect();
   try {
-    for (const txn of transactions) {
+    if (transactions.length > 0) {
+      // Batch insert transactions
+      const placeholders = transactions.map((_, i) => 
+        `($${i * 7 + 1}, $${i * 7 + 2}, $${i * 7 + 3}, $${i * 7 + 4}, $${i * 7 + 5}, $${i * 7 + 6}, $${i * 7 + 7})`
+      ).join(',');
+      const values = transactions.flatMap(txn => 
+        [txn.id, txn.date, txn.merchant, txn.category, txn.amount, txn.currency, txn.memo]
+      );
       await client.query(
         `INSERT INTO transactions (id, date, merchant, category, amount, currency, memo)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         VALUES ${placeholders}
          ON CONFLICT (id) DO NOTHING`,
-        [txn.id, txn.date, txn.merchant, txn.category, txn.amount, txn.currency, txn.memo]
+        values
       );
     }
     console.log(`Ingested ${transactions.length} transactions`);
@@ -77,22 +84,29 @@ async function ingestFunds(filePath: string) {
 
   const client = await pool.connect();
   try {
-    for (const fund of funds) {
-      // Insert fund
+    if (funds.length > 0) {
+      // Batch insert funds
+      const fundPlaceholders = funds.map((_, i) => `($${i * 3 + 1}, $${i * 3 + 2}, $${i * 3 + 3})`).join(',');
+      const fundValues = funds.flatMap(fund => [fund.id, fund.name, fund.category]);
       await client.query(
         `INSERT INTO funds (id, name, category)
-         VALUES ($1, $2, $3)
+         VALUES ${fundPlaceholders}
          ON CONFLICT (id) DO NOTHING`,
-        [fund.id, fund.name, fund.category]
+        fundValues
       );
 
-      // Insert NAV history
-      for (const nav of fund.nav) {
+      // Collect all NAVs and batch insert
+      const allNavs = funds.flatMap(fund => 
+        fund.nav.map(nav => ({ fundId: fund.id, date: nav.date, value: nav.value }))
+      );
+      if (allNavs.length > 0) {
+        const navPlaceholders = allNavs.map((_, i) => `($${i * 3 + 1}, $${i * 3 + 2}, $${i * 3 + 3})`).join(',');
+        const navValues = allNavs.flatMap(nav => [nav.fundId, nav.date, nav.value]);
         await client.query(
           `INSERT INTO fund_navs (fund_id, date, value)
-           VALUES ($1, $2, $3)
+           VALUES ${navPlaceholders}
            ON CONFLICT (fund_id, date) DO NOTHING`,
-          [fund.id, nav.date, nav.value]
+          navValues
         );
       }
     }
@@ -108,11 +122,18 @@ async function ingestHoldings(filePath: string) {
 
   const client = await pool.connect();
   try {
-    for (const holding of holdings) {
+    if (holdings.length > 0) {
+      // Batch insert holdings
+      const placeholders = holdings.map((_, i) => 
+        `($${i * 5 + 1}, $${i * 5 + 2}, $${i * 5 + 3}, $${i * 5 + 4}, $${i * 5 + 5})`
+      ).join(',');
+      const values = holdings.flatMap(h => 
+        [h.fund_id, h.fund_name, h.units, h.purchase_date, h.purchase_nav]
+      );
       await client.query(
         `INSERT INTO holdings (fund_id, fund_name, units, purchase_date, purchase_nav)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [holding.fund_id, holding.fund_name, holding.units, holding.purchase_date, holding.purchase_nav]
+         VALUES ${placeholders}`,
+        values
       );
     }
     console.log(`Ingested ${holdings.length} holdings`);

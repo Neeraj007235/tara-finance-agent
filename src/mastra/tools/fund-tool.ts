@@ -9,12 +9,12 @@ export const fundTool = createTool({
   inputSchema: z.object({
     fundId: z.string().optional().describe('Fund ID to query'),
     fundName: z.string().optional().describe('Fund name pattern to search'),
-    startDate: z.string().describe('Start date in YYYY-MM-DD format for period return calculation'),
-    endDate: z.string().describe('End date in YYYY-MM-DD format for period return calculation'),
+    startDate: z.string().optional().describe('Start date in YYYY-MM-DD format for period return calculation'),
+    endDate: z.string().optional().describe('End date in YYYY-MM-DD format for period return calculation'),
     metric: z.enum(['period_return', 'nav_history', 'current_nav', 'all_funds']).optional()
       .describe('Type of metric: period_return (NAV change %), nav_history (historical NAV), current_nav (latest NAV), all_funds (list all funds)'),
   }),
-  execute: async (input) => {
+  execute: async (input: any) => {
     try {
       // Get all funds to search if needed
       const allFunds = await query('SELECT * FROM funds ORDER BY name');
@@ -52,8 +52,14 @@ export const fundTool = createTool({
         targetFund = matching[0];
       }
 
-      // If no metric specified and we have a fund, calculate period return
-      const metric = input.metric || (targetFund ? 'period_return' : 'all_funds');
+      // If no metric specified and we have a fund, calculate period return (but need dates!)
+        let metric = input.metric || (targetFund ? 'period_return' : 'all_funds');
+        
+        // If we need start/end date but don't have them, default to all_funds
+        if ((metric === 'period_return' || metric === 'nav_history') && (!input.startDate || !input.endDate)) {
+          console.log('Missing dates, defaulting to all_funds');
+          metric = 'all_funds';
+        }
 
       if (metric === 'all_funds') {
         return {

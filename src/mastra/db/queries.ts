@@ -92,8 +92,14 @@ export async function getTotalSpendByMerchant(startDate?: string, endDate?: stri
   return query(sql, params);
 }
 
-export async function getNetSpend(startDate?: string, endDate?: string) {
-  let sql = `SELECT SUM(amount) as total FROM transactions WHERE amount != 0`;
+export async function getNetSpend(
+  startDate?: string, 
+  endDate?: string, 
+  category?: string, 
+  merchant?: string, 
+  excludeTransfers: boolean = true
+) {
+  let sql = `SELECT SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) as total FROM transactions WHERE 1=1`;
   const params: any[] = [];
 
   if (startDate) {
@@ -103,6 +109,17 @@ export async function getNetSpend(startDate?: string, endDate?: string) {
   if (endDate) {
     sql += ` AND date <= $${params.length + 1}`;
     params.push(endDate);
+  }
+  if (category) {
+    sql += ` AND category = $${params.length + 1}`;
+    params.push(category);
+  }
+  if (merchant) {
+    sql += ` AND UPPER(merchant) LIKE UPPER($${params.length + 1})`;
+    params.push(`%${merchant}%`);
+  }
+  if (excludeTransfers) {
+    sql += ` AND category != 'transfer'`;
   }
 
   const result = await queryOne(sql, params);

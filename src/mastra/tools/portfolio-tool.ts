@@ -11,7 +11,7 @@ export const portfolioTool = createTool({
     fundId: z.string().optional().describe('Fund ID to calculate return on'),
     fundName: z.string().optional().describe('Fund name to calculate return on'),
   }),
-  execute: async (input) => {
+  execute: async (input: any) => {
     try {
       const metric = input.metric || 'portfolio_value';
 
@@ -29,9 +29,11 @@ export const portfolioTool = createTool({
         const enrichedHoldings = await Promise.all(
           holdings.map(async (h: any) => {
             const latestNav = await queries.getLatestFundNav(h.fund_id);
-            const currentNav = latestNav ? latestNav.value : null;
-            const purchaseCost = h.units * h.purchase_nav;
-            const currentValue = currentNav ? h.units * currentNav : null;
+            const currentNav = latestNav ? Number(latestNav.value) : null;
+            const units = Number(h.units);
+            const purchaseNav = Number(h.purchase_nav);
+            const purchaseCost = units * purchaseNav;
+            const currentValue = currentNav ? units * currentNav : null;
             const gain = currentValue ? currentValue - purchaseCost : null;
             const returnPercentage = currentValue && purchaseCost 
               ? ((currentValue - purchaseCost) / purchaseCost) * 100 
@@ -40,9 +42,9 @@ export const portfolioTool = createTool({
             return {
               fundId: h.fund_id,
               fundName: h.fund_name,
-              units: parseFloat(h.units.toFixed(4)),
+              units: parseFloat(units.toFixed(4)),
               purchaseDate: h.purchase_date,
-              purchaseNav: parseFloat(h.purchase_nav.toFixed(4)),
+              purchaseNav: parseFloat(purchaseNav.toFixed(4)),
               purchaseCost: parseFloat(purchaseCost.toFixed(2)),
               currentNav: currentNav ? parseFloat(currentNav.toFixed(4)) : null,
               currentValue: currentValue ? parseFloat(currentValue.toFixed(2)) : null,
@@ -75,17 +77,19 @@ export const portfolioTool = createTool({
         const enrichedHoldings = await Promise.all(
           holdings.map(async (h: any) => {
             const latestNav = await queries.getLatestFundNav(h.fund_id);
-            const currentNav = latestNav ? latestNav.value : 0;
-            const purchaseCost = h.units * h.purchase_nav;
-            const currentValue = h.units * currentNav;
+            const currentNav = latestNav ? Number(latestNav.value) : 0;
+            const units = Number(h.units);
+            const purchaseNav = Number(h.purchase_nav);
+            const purchaseCost = units * purchaseNav;
+            const currentValue = units * currentNav;
 
             totalPurchaseCost += purchaseCost;
             totalCurrentValue += currentValue;
 
             return {
               fundName: h.fund_name,
-              units: parseFloat(h.units.toFixed(4)),
-              purchaseNav: parseFloat(h.purchase_nav.toFixed(4)),
+              units: parseFloat(units.toFixed(4)),
+              purchaseNav: parseFloat(purchaseNav.toFixed(4)),
               currentNav: parseFloat(currentNav.toFixed(4)),
               purchaseCost: parseFloat(purchaseCost.toFixed(2)),
               currentValue: parseFloat(currentValue.toFixed(2)),
@@ -138,8 +142,10 @@ export const portfolioTool = createTool({
           };
         }
 
-        const purchaseCost = holding.units * holding.purchase_nav;
-        const currentValue = holding.units * latestNav.value;
+        const units = Number(holding.units);
+        const purchaseNav = Number(holding.purchase_nav);
+        const purchaseCost = units * purchaseNav;
+        const currentValue = units * Number(latestNav.value);
         const gain = currentValue - purchaseCost;
         const returnPercentage = (gain / purchaseCost) * 100;
 
@@ -148,9 +154,9 @@ export const portfolioTool = createTool({
           fundId: holding.fund_id,
           fundName: holding.fund_name,
           purchaseDate: holding.purchase_date,
-          purchaseNav: parseFloat(holding.purchase_nav.toFixed(4)),
-          currentNav: parseFloat(latestNav.value.toFixed(4)),
-          units: parseFloat(holding.units.toFixed(4)),
+          purchaseNav: parseFloat(purchaseNav.toFixed(4)),
+          currentNav: parseFloat(Number(latestNav.value).toFixed(4)),
+          units: parseFloat(units.toFixed(4)),
           purchaseCost: parseFloat(purchaseCost.toFixed(2)),
           currentValue: parseFloat(currentValue.toFixed(2)),
           gain: parseFloat(gain.toFixed(2)),
