@@ -88,14 +88,14 @@ GET /logs - View request logs
 ```bash
 curl -X POST http://localhost:3000/ask \
   -H "Content-Type: application/json" \
-  -d '{"question": "How much did I spend on food last month?"}'
+  -d '{"question": "How much did I spend on food in January 2024"}'
 ```
 
 Response:
 
 ```json
 {
-  "answer": "Based on your transactions, you spent ₹4,532.50 on food in the last month (February 2025). This includes 12 transactions ranging from ₹45 to ₹892.",
+  "answer": "Total computed: 1,664.88.",
   "requestId": "uuid...",
   "toolsCalled": ["query_transactions"],
   "latency": 245
